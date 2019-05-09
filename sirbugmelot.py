@@ -88,6 +88,7 @@ class SirBugMeLot:
                 bug_msg = 'You are working {} minutes now, take a break.'.format(work_minutes)
             else:
                 bug_msg = 'It has been {} minutes now, get up already.'.format(work_minutes)
+                self.play_mp3(self.bugsound)
             self.speak(bug_msg)
         else:
             self.play_mp3(self.bugsound)
