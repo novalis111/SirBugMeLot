@@ -103,8 +103,8 @@ class SirBugMeLot:
             raise FileNotFoundError(default_sound_path)
         # sane defaults
         defaults = {
-            'worktime_max': 45 * 60,
-            'pausetime': 5 * 60,
+            'worktime_max': 45,
+            'pausetime': 5,
             'sound_lvl1': 'lvl1.mp3',
             'sound_lvl2': 'lvl2.mp3',
             'sound_lvl3': 'lvl3.mp3',
