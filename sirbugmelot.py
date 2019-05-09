@@ -16,13 +16,13 @@ class SirBugMeLot:
     }
 
     def __init__(self):
+        self.first_press = self.last_press = self.last_pause = self.last_bug = self.last_log = self.now()
         self.base_path = os.path.abspath(os.path.dirname(sys.argv[0]))
         self.logfile = open(os.path.join(self.base_path, 'bugme.log'), "w")
-        self.last_log = self.now()
-        self.workspan = 0
-        self.first_press = self.last_press = self.last_pause = self.last_bug = self.now()
-        self.buglvl = 5 * 60
         self.config = self.read_config()
+        self.workspan = 0
+        self.buglvl = 5
+        self.bugsound = self.config['sound_lvl1']
 
     def write_log(self, msg):
         self.logfile.write(msg + "\n")
@@ -43,38 +43,58 @@ class SirBugMeLot:
         self.check_bugme()
 
     @staticmethod
-    def play_mp3(file: str):
-        if file is None or not os.path.isfile(file):
+    def play_mp3(file_path: str):
+        if file_path is None or not os.path.isfile(file_path):
             return
-        call(["ffplay", "-nodisp -autoexit {} > /dev/null 2>&1".format(file)])
+        fnull = open(os.devnull, 'w')
+        call(["ffplay", "-autoexit", "-nodisp", str(file_path)], stdout=fnull, stderr=fnull, close_fds=True)
 
     def check_bugme(self):
         self.workspan = self.last_press - self.first_press
-        # Adjust bug level according to uninterrupted working time
-        if self.workspan >= self.config['worktime_max'] + 20 * 60:
-            self.buglvl = self.buglevels['High']
-            self.write_log('Setting buglevel to High at workspan {} minutes'.format(round(self.workspan / 60)))
-        elif self.workspan >= self.config['worktime_max'] + 10 * 60:
-            self.buglvl = self.buglevels['Med']
-            self.write_log('Setting buglevel to Med at workspan {} minutes'.format(round(self.workspan / 60)))
-        elif self.workspan >= self.config['worktime_max']:
-            self.buglvl = self.buglevels['Low']
-            self.write_log('Setting buglevel to Low at workspan {} minutes'.format(round(self.workspan / 60)))
+        if self.set_buglevel():
+            # buglevel changed, bug him
+            self.bug_him()
         # Check if pause was done
         if self.last_press - self.last_pause > self.config['pausetime'] * 60:
             self.first_press = self.now()
+            self.play_mp3(self.config['sound_pause'])
             self.write_log('Pause of {} minutes registered, resetting timer'
                            .format(round((self.last_press - self.last_pause) / 60)))
         # Check if bugging is necessary
         seconds_since_bug = self.now() - self.last_bug
         if self.workspan > self.config['worktime_max'] and seconds_since_bug > self.buglvl:
-            self.last_bug = self.now()
-            self.play_mp3(self.config['sound_lvl1'])
-            self.write_log('Bugging after {} minutes'.format(round(self.workspan / 60, 2)))
+            self.bug_him()
         elif self.last_press - self.last_pause > 60 or self.now() - self.last_log > 120:
             self.write_log('Working for {} minutes'.format(round(self.workspan / 60, 2)))
             self.last_log = self.now()
         self.last_pause = self.last_press
+
+    def bug_him(self):
+        self.play_mp3(self.bugsound)
+        self.last_bug = self.now()
+        self.write_log('Bugging after {} minutes'.format(round(self.workspan / 60, 2)))
+
+    def set_buglevel(self):
+        # Adjust bug level according to uninterrupted working time
+        if self.workspan >= self.config['worktime_max'] + 20 * 60:
+            if self.buglvl != self.buglevels['High']:
+                self.buglvl = self.buglevels['High']
+                self.bugsound = self.config['sound_lvl3']
+                self.write_log('Setting buglevel to High at workspan {} minutes'.format(round(self.workspan / 60)))
+                return True
+        elif self.workspan >= self.config['worktime_max'] + 10 * 60:
+            if self.buglvl != self.buglevels['Med']:
+                self.buglvl = self.buglevels['Med']
+                self.bugsound = self.config['sound_lvl2']
+                self.write_log('Setting buglevel to Med at workspan {} minutes'.format(round(self.workspan / 60)))
+                return True
+        elif self.workspan >= self.config['worktime_max']:
+            if self.buglvl != self.buglevels['Low']:
+                self.buglvl = self.buglevels['Low']
+                self.bugsound = self.config['sound_lvl1']
+                self.write_log('Setting buglevel to Low at workspan {} minutes'.format(round(self.workspan / 60)))
+                return True
+        return False
 
     def read_config(self):
         result = {}
@@ -85,9 +105,9 @@ class SirBugMeLot:
         defaults = {
             'worktime_max': 45 * 60,
             'pausetime': 5 * 60,
-            'sound_lvl1': 'bugme.mp3',
-            'sound_lvl2': 'bugme.mp3',
-            'sound_lvl3': 'bugme.mp3',
+            'sound_lvl1': 'lvl1.mp3',
+            'sound_lvl2': 'lvl2.mp3',
+            'sound_lvl3': 'lvl3.mp3',
             'sound_pause': 'pause.mp3',
         }
         # read from .env
@@ -127,4 +147,4 @@ try:
     while True:
         sleep(5)
 except FileNotFoundError as e:
-    sys.stdout.write('Missing file: ' + e.args[0])
+    sys.stdout.write('Missing file: ' + str(e.args[0]))
