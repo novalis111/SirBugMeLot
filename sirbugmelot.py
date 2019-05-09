@@ -25,6 +25,7 @@ class SirBugMeLot:
         self.workspan = 0
         self.buglvl = 5
         self.bugsound = self.config['sound_lvl1']
+        self.playing = False
 
     def write_log(self, msg):
         self.logfile.write(msg + "\n")
@@ -57,11 +58,14 @@ class SirBugMeLot:
             # buglevel changed, bug him
             self.bug_him()
         # Check if pause was done
-        if self.last_press - self.last_pause > self.config['pausetime'] * 60:
+        if self.last_press - self.last_pause > self.config['pausetime']:
             self.first_press = self.now()
-            self.play_mp3(self.config['sound_pause'])
-            self.write_log('Pause of {} minutes registered, resetting timer'
-                           .format(round((self.last_press - self.last_pause) / 60)))
+            paused_minutes = str(round((self.last_press - self.last_pause) / 60))
+            if self.config['use_tts']:
+                self.speak('You just had a {} minute pause'.format(paused_minutes))
+            else:
+                self.play_mp3(self.config['sound_pause'])
+            self.write_log('Pause of {} minutes registered, resetting timer'.format(paused_minutes))
         # Check if bugging is necessary
         seconds_since_bug = self.now() - self.last_bug
         if self.workspan > self.config['worktime_max'] and seconds_since_bug > self.buglvl:
@@ -80,6 +84,9 @@ class SirBugMeLot:
         f.close()
 
     def bug_him(self):
+        if self.playing:
+            return
+        self.playing = True
         if self.config['use_tts']:
             work_minutes = str(round(self.workspan / 60))
             if self.buglvl == self.buglevels['Low']:
@@ -87,13 +94,14 @@ class SirBugMeLot:
             elif self.buglvl == self.buglevels['Med']:
                 bug_msg = 'You are working {} minutes now, take a break.'.format(work_minutes)
             else:
-                bug_msg = 'It has been {} minutes now, get up already.'.format(work_minutes)
+                bug_msg = 'It has been {} minutes now, get moving.'.format(work_minutes)
                 self.play_mp3(self.bugsound)
             self.speak(bug_msg)
         else:
             self.play_mp3(self.bugsound)
         self.last_bug = self.now()
         self.write_log('Bugging after {} minutes'.format(round(self.workspan / 60, 2)))
+        self.playing = False
 
     def set_buglevel(self):
         # Adjust bug level according to uninterrupted working time
