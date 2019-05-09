@@ -1,5 +1,5 @@
 # About
-Sir BugMeLot is a little helper to bug you if you stay in front of the computer for too long. 
+Sir BugMeLot is a little helper to bug you if you stay in front of the computer for too long.
 
 It listens to mouse- and keyboard- events and runs an internal timer to measure the time you are active. It detects pauses and resets the timer if a pause is finished. If you exceed the configured time it will start to bug you, getting more annoying until you pause.
 
@@ -20,3 +20,6 @@ SirBugMeLot will run in the background and start bugging you after the configure
 
 # License
 MIT License. Do whatever you want with it.
+
+# Attribution
+Sounds are from [orangefreesounds](http://www.orangefreesounds.com/) and licensed under [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/)
