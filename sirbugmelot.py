@@ -3,8 +3,10 @@ import os
 import re
 import sys
 from subprocess import call
+from tempfile import NamedTemporaryFile
 from time import sleep
 
+from gtts import gTTS
 from pynput import mouse, keyboard
 
 
@@ -69,8 +71,26 @@ class SirBugMeLot:
             self.last_log = self.now()
         self.last_pause = self.last_press
 
+    def speak(self, msg):
+        tts = gTTS(text=msg, lang='en')
+        f = NamedTemporaryFile()
+        tts.write_to_fp(f)
+        f.flush()
+        self.play_mp3(f.name)
+        f.close()
+
     def bug_him(self):
-        self.play_mp3(self.bugsound)
+        if self.config['use_tts']:
+            work_minutes = str(round(self.workspan / 60))
+            if self.buglvl == self.buglevels['Low']:
+                bug_msg = 'You have been working for {} minutes, you should take a break.'.format(work_minutes)
+            elif self.buglvl == self.buglevels['Med']:
+                bug_msg = 'You are working {} minutes now, take a break.'.format(work_minutes)
+            else:
+                bug_msg = 'It has been {} minutes now, get up already.'.format(work_minutes)
+            self.speak(bug_msg)
+        else:
+            self.play_mp3(self.bugsound)
         self.last_bug = self.now()
         self.write_log('Bugging after {} minutes'.format(round(self.workspan / 60, 2)))
 
@@ -109,6 +129,7 @@ class SirBugMeLot:
             'sound_lvl2': 'lvl2.mp3',
             'sound_lvl3': 'lvl3.mp3',
             'sound_pause': 'pause.mp3',
+            'use_tts': False,
         }
         # read from .env
         env_path = os.path.join(self.base_path, '.env')
@@ -134,6 +155,8 @@ class SirBugMeLot:
             if k == 'sound_pause':
                 sound_file_path = os.path.join(self.base_path, v) if re.match('.*mp3$', v) else None
                 result[k] = sound_file_path if os.path.isfile(sound_file_path) else None
+            if k == 'use_tts':
+                result[k] = bool(v)
         self.write_log('Config read: ' + result.__str__())
         return result
 
