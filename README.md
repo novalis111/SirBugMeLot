@@ -11,7 +11,7 @@ It listens to mouse- and keyboard- events and runs an internal timer to measure 
 # Usage
 1. Copy .env.dist to .env and adjust if needed (optional)
 2. Copy custom mp3 files into dir (optional)
-3. Run with
+3. Use provided run.sh or run with
 ```bash
 nohup python sirbugmelot.py > /dev/null &
 ```
