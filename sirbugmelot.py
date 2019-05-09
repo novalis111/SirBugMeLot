@@ -60,12 +60,14 @@ class SirBugMeLot:
         # Check if pause was done
         if self.last_press - self.last_pause > self.config['pausetime']:
             self.first_press = self.now()
+            self.last_bug = self.now()
             paused_minutes = str(round((self.last_press - self.last_pause) / 60))
             if self.config['use_tts']:
                 self.speak('You just had a {} minute pause'.format(paused_minutes))
             else:
                 self.play_mp3(self.config['sound_pause'])
             self.write_log('Pause of {} minutes registered, resetting timer'.format(paused_minutes))
+            return
         # Check if bugging is necessary
         seconds_since_bug = self.now() - self.last_bug
         if self.workspan > self.config['worktime_max'] and seconds_since_bug > self.buglvl:
