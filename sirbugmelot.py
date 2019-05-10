@@ -54,6 +54,8 @@ class SirBugMeLot:
 
     def check_bugme(self):
         self.workspan = self.last_press - self.first_press
+        if self.playing or self.workspan < 300:
+            return
         if self.set_buglevel():
             # buglevel changed, bug him
             self.bug_him()
@@ -62,11 +64,13 @@ class SirBugMeLot:
             self.first_press = self.now()
             self.last_bug = self.now()
             paused_minutes = str(round((self.last_press - self.last_pause) / 60))
+            self.playing = True
             if self.config['use_tts']:
                 self.speak('You just had a {} minute pause'.format(paused_minutes))
             else:
                 self.play_mp3(self.config['sound_pause'])
             self.write_log('Pause of {} minutes registered, resetting timer'.format(paused_minutes))
+            self.playing = False
             return
         # Check if bugging is necessary
         seconds_since_bug = self.now() - self.last_bug
