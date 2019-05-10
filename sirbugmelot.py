@@ -65,10 +65,12 @@ class SirBugMeLot:
             self.first_press = self.last_pause = self.last_bug = self.now()
             self.playing = True
             paused_minutes = str(round(paused_seconds / 60))
-            if self.config['use_tts']:
-                self.speak('You just had a {} minute pause'.format(paused_minutes))
-            else:
-                self.play_mp3(self.config['sound_pause'])
+            if paused_seconds < 3 * self.config['pausetime']:
+                # This counts as a real pause (and not as a long time away) announce time
+                if self.config['use_tts']:
+                    self.speak('You just had a {} minute pause'.format(paused_minutes))
+                else:
+                    self.play_mp3(self.config['sound_pause'])
             self.write_log('Pause of {} minutes registered, resetting timer'.format(paused_minutes))
             self.playing = False
             return
