@@ -82,8 +82,9 @@ class SirBugMeLot:
         if self.workspan > self.config['worktime_max'] and seconds_since_bug > self.buglvl:
             self.bug_him()
         elif self.last_press - self.last_pause > 60 or self.now() - self.last_log > 300:
-            self.write_log('Working for {} minutes, time between last two actions was {} seconds'
-                           .format(round(self.workspan / 60, 2), paused_seconds))
+            if self.workspan < 120:
+                return
+            self.write_log('Working for {} minutes'.format(round(self.workspan / 60, 2)))
             self.last_log = self.now()
 
     def speak(self, msg):
