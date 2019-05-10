@@ -54,7 +54,7 @@ class SirBugMeLot:
 
     def check_bugme(self):
         self.workspan = self.last_press - self.first_press
-        if self.playing or self.workspan < 300:
+        if self.playing or self.workspan < 60:
             return
         if self.set_buglevel():
             # buglevel changed, bug him
