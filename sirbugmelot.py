@@ -23,9 +23,9 @@ class SirBugMeLot:
         self.logfile = open(os.path.join(self.base_path, 'bugme.log'), "w")
         self.config = self.read_config()
         self.workspan = 0
-        self.buglvl = 5
-        self.bugsound = self.config['sound_lvl1']
         self.playing = False
+        self.buglvl = False
+        self.bugsound = ''
 
     def write_log(self, msg):
         self.logfile.write(msg + "\n")
@@ -37,11 +37,14 @@ class SirBugMeLot:
 
     # noinspection PyUnusedLocal
     def mouse_count(self, x, y):
-        self.last_press = self.now()
-        self.check_bugme()
+        self.process_press()
 
     # noinspection PyUnusedLocal
     def key_count(self, key):
+        self.process_press()
+
+    def process_press(self):
+        self.last_pause = self.last_press
         self.last_press = self.now()
         self.check_bugme()
 
@@ -54,18 +57,14 @@ class SirBugMeLot:
 
     def check_bugme(self):
         self.workspan = self.last_press - self.first_press
-        if self.playing or self.workspan < 60:
+        if self.playing:
             return
-        if self.set_buglevel():
-            # buglevel changed, bug him
-            self.bug_him()
         # Check if pause was done
-        if self.last_press - self.last_pause > self.config['pausetime']:
-            self.first_press = self.now()
-            self.last_pause = self.now()
-            self.last_bug = self.now()
-            paused_minutes = str(round((self.last_press - self.last_pause) / 60))
+        paused_seconds = round(self.last_press - self.last_pause)
+        if paused_seconds > self.config['pausetime']:
+            self.first_press = self.last_pause = self.last_bug = self.now()
             self.playing = True
+            paused_minutes = str(round(paused_seconds / 60))
             if self.config['use_tts']:
                 self.speak('You just had a {} minute pause'.format(paused_minutes))
             else:
@@ -73,14 +72,17 @@ class SirBugMeLot:
             self.write_log('Pause of {} minutes registered, resetting timer'.format(paused_minutes))
             self.playing = False
             return
+        if self.workspan > self.config['worktime_max'] and self.set_buglevel():
+            # buglevel changed, bug him
+            self.bug_him()
         # Check if bugging is necessary
         seconds_since_bug = self.now() - self.last_bug
         if self.workspan > self.config['worktime_max'] and seconds_since_bug > self.buglvl:
             self.bug_him()
-        elif self.last_press - self.last_pause > 60 or self.now() - self.last_log > 120:
-            self.write_log('Working for {} minutes'.format(round(self.workspan / 60, 2)))
+        elif self.last_press - self.last_pause > 60 or self.now() - self.last_log > 300:
+            self.write_log('Working for {} minutes, time between last two actions was {} seconds'
+                           .format(round(self.workspan / 60, 2), paused_seconds))
             self.last_log = self.now()
-        self.last_pause = self.last_press
 
     def speak(self, msg):
         tts = gTTS(text=msg, lang='en')
