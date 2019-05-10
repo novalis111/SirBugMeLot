@@ -62,6 +62,7 @@ class SirBugMeLot:
         # Check if pause was done
         if self.last_press - self.last_pause > self.config['pausetime']:
             self.first_press = self.now()
+            self.last_pause = self.now()
             self.last_bug = self.now()
             paused_minutes = str(round((self.last_press - self.last_pause) / 60))
             self.playing = True
