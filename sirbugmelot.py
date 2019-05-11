@@ -58,10 +58,13 @@ class SirBugMeLot:
             self.reset_timers()
             self.playing = True
             paused_minutes = str(round(paused_seconds / 60))
-            if paused_seconds < 3 * self.config['pausetime']:
+            if paused_seconds < self.config['pausetime'] * 3:
                 # This counts as a real pause (and not as a long time away) announce time
                 if self.config['use_tts']:
-                    self.speak('You just had a {} minute pause'.format(paused_minutes))
+                    if self.config['txt_pause'] != '':
+                        name = self.config['txt_name']
+                        pause_msg = self.config['txt_pause'].format(minutes=paused_minutes, name=name)
+                        self.speak(pause_msg)
                 else:
                     self.play_mp3(self.config['sound_pause'])
             self.write_log('Pause of {} minutes registered, resetting timer'.format(paused_minutes))
@@ -108,14 +111,17 @@ class SirBugMeLot:
         self.playing = True
         if self.config['use_tts']:
             work_minutes = str(round(self.workspan / 60))
+            name = self.config['txt_name']
             if self.buglvl == self.buglevels['Low']:
-                bug_msg = 'You have been working for {} minutes, you should take a break.'.format(work_minutes)
+                bug_msg = self.config['txt_lvl1'].format(minutes=work_minutes, name=name)
+                self.speak(bug_msg)
             elif self.buglvl == self.buglevels['Med']:
-                bug_msg = 'You are working {} minutes now, take a break.'.format(work_minutes)
+                bug_msg = self.config['txt_lvl2'].format(minutes=work_minutes, name=name)
+                self.speak(bug_msg)
             else:
-                bug_msg = 'It has been {} minutes now, get moving.'.format(work_minutes)
+                bug_msg = self.config['txt_lvl3'].format(minutes=work_minutes, name=name)
+                self.speak(bug_msg)
                 self.play_mp3(self.bugsound)
-            self.speak(bug_msg)
         else:
             self.play_mp3(self.bugsound)
         self.last_bug = self.now()
@@ -145,48 +151,52 @@ class SirBugMeLot:
         return False
 
     def read_config(self):
+        defaults = self.parse_env(os.path.join(self.base_path, '.env.dist'))
+        usr_config = self.parse_env(os.path.join(self.base_path, '.env'))
+        # Verify config
+        for dk, dv in defaults.items():
+            if dk not in usr_config:
+                usr_config[dk] = dv
+        self.write_log('Config read: ' + usr_config.__str__())
+        return usr_config
+
+    def parse_env(self, env_path):
         result = {}
-        default_sound_path = os.path.join(self.base_path, 'bugme.mp3')
-        if not os.path.isfile(default_sound_path):
-            raise FileNotFoundError(default_sound_path)
-        # sane defaults
-        defaults = {
-            'worktime_max': 45,
-            'pausetime': 5,
-            'sound_lvl1': 'lvl1.mp3',
-            'sound_lvl2': 'lvl2.mp3',
-            'sound_lvl3': 'lvl3.mp3',
-            'sound_pause': 'pause.mp3',
-            'use_tts': False,
-        }
-        # read from .env
-        env_path = os.path.join(self.base_path, '.env')
         if os.path.isfile(env_path):
             envre = re.compile(r'''^([^\s=]+)=(?:[\s"']*)(.+?)(?:[\s"']*)$''')
             with open(env_path) as env_file:
                 for line in env_file:
                     match = envre.match(line)
                     if match is not None:
-                        result[match.group(1)] = match.group(2)
-        # Verify config
-        for k, v in defaults.items():
-            if k not in result:
-                result[k] = v
-        for k, v in result.items():
-            if k == 'worktime_max':
-                result[k] = int(v) * 60 if int(v) > 0 else 45 * 60
-            if k == 'pausetime':
-                result[k] = int(v) * 60 if int(v) > 0 else 5 * 60
-            if k in ('sound_lvl1', 'sound_lvl2', 'sound_lvl3', 'sound_pause'):
-                sound_file_path = os.path.join(self.base_path, v) if re.match('.*mp3$', v) else default_sound_path
-                result[k] = sound_file_path if os.path.isfile(sound_file_path) else default_sound_path
-            if k == 'sound_pause':
-                sound_file_path = os.path.join(self.base_path, v) if re.match('.*mp3$', v) else None
-                result[k] = sound_file_path if os.path.isfile(sound_file_path) else None
-            if k == 'use_tts':
-                result[k] = bool(v)
-        self.write_log('Config read: ' + result.__str__())
+                        key = str(match.group(1))
+                        result[key] = self.get_env_value(key, match.group(2))
         return result
+
+    def get_env_value(self, key, value):
+        default_sound_path = os.path.join(self.base_path, 'bugme.mp3')
+        if not os.path.isfile(default_sound_path):
+            raise FileNotFoundError(default_sound_path)
+        if key == 'use_tts':
+            value = bool(value)
+        if key in ('worktime_max', 'pausetime'):
+            value = int(value)
+            if key == 'worktime_max':
+                value = value * 60 if value > 0 else 45 * 60
+            if key == 'pausetime':
+                value = value * 60 if value > 0 else 5 * 60
+        if key in ('sound_lvl1', 'sound_lvl2', 'sound_lvl3', 'sound_pause'):
+            file_name = str(value)
+            if re.match('.*mp3$', file_name):
+                sound_file_path = os.path.join(self.base_path, file_name)
+            else:
+                sound_file_path = default_sound_path
+            if os.path.isfile(sound_file_path):
+                value = sound_file_path
+            else:
+                value = default_sound_path
+        if key in ('txt_name', 'txt_lvl1', 'txt_lvl2', 'txt_lvl3', 'txt_pause'):
+            value = str(value)
+        return value
 
 
 try:
