@@ -48,13 +48,6 @@ class SirBugMeLot:
         self.last_press = self.now()
         self.check_bugme()
 
-    @staticmethod
-    def play_mp3(file_path: str):
-        if file_path is None or not os.path.isfile(file_path):
-            return
-        fnull = open(os.devnull, 'w')
-        call(["ffplay", "-autoexit", "-nodisp", str(file_path)], stdout=fnull, stderr=fnull, close_fds=True)
-
     def check_bugme(self):
         self.workspan = self.last_press - self.first_press
         if self.playing:
@@ -62,7 +55,7 @@ class SirBugMeLot:
         # Check if pause was done
         paused_seconds = round(self.last_press - self.last_pause)
         if paused_seconds > self.config['pausetime']:
-            self.first_press = self.last_pause = self.last_bug = self.now()
+            self.reset_timers()
             self.playing = True
             paused_minutes = str(round(paused_seconds / 60))
             if paused_seconds < 3 * self.config['pausetime']:
@@ -75,6 +68,10 @@ class SirBugMeLot:
             self.playing = False
             return
         if self.workspan > self.config['worktime_max'] and self.set_buglevel():
+            if self.workspan > self.config['worktime_max'] * 3:
+                # Happens when machine hibernates, so we need to start over
+                self.reset_timers()
+                return
             # buglevel changed, bug him
             self.bug_him()
         # Check if bugging is necessary
@@ -87,6 +84,9 @@ class SirBugMeLot:
             self.write_log('Working for {} minutes'.format(round(self.workspan / 60, 2)))
             self.last_log = self.now()
 
+    def reset_timers(self):
+        self.first_press = self.last_pause = self.last_bug = self.now()
+
     def speak(self, msg):
         tts = gTTS(text=msg, lang='en')
         f = NamedTemporaryFile()
@@ -94,6 +94,13 @@ class SirBugMeLot:
         f.flush()
         self.play_mp3(f.name)
         f.close()
+
+    @staticmethod
+    def play_mp3(file_path: str):
+        if file_path is None or not os.path.isfile(file_path):
+            return
+        fnull = open(os.devnull, 'w')
+        call(["ffplay", "-autoexit", "-nodisp", str(file_path)], stdout=fnull, stderr=fnull, close_fds=True)
 
     def bug_him(self):
         if self.playing:
