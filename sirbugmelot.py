@@ -55,9 +55,9 @@ class SirBugMeLot:
         # Check if pause was done
         paused_seconds = round(self.last_press - self.last_pause)
         if paused_seconds > self.config['pausetime']:
+            paused_minutes = str(round(paused_seconds / 60))
             self.reset_timers()
             self.playing = True
-            paused_minutes = str(round(paused_seconds / 60))
             if paused_seconds < self.config['pausetime'] * 3:
                 # This counts as a real pause (and not as a long time away) announce time
                 if self.config['use_tts']:
