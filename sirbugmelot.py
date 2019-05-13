@@ -28,7 +28,8 @@ class SirBugMeLot:
         self.bugsound = ''
 
     def write_log(self, msg):
-        self.logfile.write(msg + "\n")
+        now = datetime.datetime.utcnow().strftime('%Y%m%d %H:%M')
+        self.logfile.write(now + ";" + msg + "\n")
         self.logfile.flush()
 
     @staticmethod
